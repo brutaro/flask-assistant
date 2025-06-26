@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Normativos SIAPE Retriever
+  version: '1.0'
+servers:
+  - url: https://flask-assistant.onrender.com
+paths:
+  /query:
+    post:
+      operationId: buscarNormativo
+      summary: Consulta à base de normativos do SIAPE com base vetorizada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pergunta:
+                  type: string
+                  description: Pergunta feita pelo usuário
+      responses:
+        '200':
+          description: Resposta encontrada na base vetorizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resposta:
+                    type: string
