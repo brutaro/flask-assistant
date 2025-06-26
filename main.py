@@ -1,46 +1,54 @@
 from flask import Flask, request, jsonify
-import openai
+from openai import OpenAI
 import os
 
 app = Flask(__name__)
+client = OpenAI(api_key=os.getenv("Osk-proj-8Ay8NPOeVsIuG2M9CJbgU-w7nY3wU2BZxqsUXmoAvDlxEcRwk_1hwxn5ird_VXGt4JYMScpsw7T3BlbkFJDf1F5scnJp0w43tP2a04Rz4bWxwsLvPbUEWGcbMUwKQpE4cyqhE_eRrs3BKm-_vAQMTXou93QA"))
 
-# Pegando as variáveis do ambiente
-openai.api_key = os.getenv("OPENAI_API_KEY")
-assistant_id = os.getenv("ASSISTANT_ID")
+ASSISTANT_ID = "asst_4LQKOMcVXh4ZNUsDAAXGG4Ge"
 
-@app.route("/ask", methods=["POST"])
-def ask():
+@app.route("/query", methods=["POST"])
+def buscar_normativo():
     data = request.get_json()
-    user_input = data.get("message", "")
+    pergunta = data.get("pergunta")
+
+    if not pergunta:
+        return jsonify({"erro": "Campo 'pergunta' é obrigatório"}), 400
 
     try:
-        thread = openai.beta.threads.create()
-        openai.beta.threads.messages.create(
+        # Cria um novo thread para a conversa
+        thread = client.beta.threads.create()
+
+        # Adiciona a mensagem do usuário ao thread
+        client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
-            content=user_input
-        )
-        run = openai.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant_id
+            content=pergunta
         )
 
-        # Espera ativa (simples) até resposta estar pronta
+        # Executa o assistant com a vector store conectada
+        run = client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=ASSISTANT_ID,
+        )
+
+        # Aguarda até a execução finalizar
         while True:
-            run_status = openai.beta.threads.runs.retrieve(
+            run_status = client.beta.threads.runs.retrieve(
                 thread_id=thread.id,
                 run_id=run.id
             )
             if run_status.status == "completed":
                 break
 
-        messages = openai.beta.threads.messages.list(thread_id=thread.id)
-        answer = messages.data[0].content[0].text.value
+        # Obtém a resposta final
+        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        resposta = messages.data[0].content[0].text.value
 
-        return jsonify({"response": answer})
+        return jsonify({"resposta": resposta})
 
     except Exception as e:
-        return jsonify({"response": f"Erro: {str(e)}"}), 500
+        return jsonify({"erro": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0")
+    app.run(host="0.0.0.0", port=5000)
